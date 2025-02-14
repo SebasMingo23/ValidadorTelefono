@@ -1,0 +1,103 @@
+function wsforms_email_validation() {
+    ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("📧 Validación de Email activada...");
+
+            function attachEmailValidation(emailField) {
+                if (emailField.hasAttribute("data-validated")) return; // Evita validaciones duplicadas
+
+                const form = emailField.closest("form");
+                let isValidEmail = false;
+
+                // Expresión regular mejorada para validar emails
+                const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+                // Lista negra de dominios genéricos o de prueba
+                const restrictedDomains = [
+                    "test.com", "example.com", "email.com", "mail.com",
+                    "fake.com", "demo.com", "prueba.com"
+                ];
+
+                // Agregar placeholder dinámico
+                emailField.placeholder = "Ej: usuario@ejemplo.com";
+
+                // Crear mensaje de advertencia
+                let warningMessage = document.createElement("span");
+                warningMessage.style.color = "#e74c3c"; // Rojo más notorio
+                warningMessage.style.fontSize = "14px";
+                warningMessage.style.marginTop = "5px";
+                warningMessage.style.display = "none";
+                warningMessage.innerHTML = "⚠️ Ingresá un email válido.";
+
+                emailField.parentNode.appendChild(warningMessage);
+
+                // Validación cuando el usuario deja de escribir (blur)
+                emailField.addEventListener("blur", function () {
+                    let emailValue = emailField.value.trim();
+                    console.log("📧 Validando email:", emailValue);
+
+                    if (emailValue.length === 0) {
+                        isValidEmail = false;
+                        warningMessage.style.display = "none";
+                        emailField.style.border = "2px solid #ccc";
+                        return;
+                    }
+
+                    if (emailRegex.test(emailValue)) {
+                        let emailDomain = emailValue.split("@")[1];
+
+                        if (restrictedDomains.includes(emailDomain.toLowerCase())) {
+                            console.warn("⛔ Dominio restringido:", emailDomain);
+                            warningMessage.innerHTML = `⚠️ No se permiten emails con el dominio <strong>${emailDomain}</strong>.`;
+                            warningMessage.style.display = "block";
+                            emailField.style.border = "2px solid red";
+                            isValidEmail = false;
+                        } else {
+                            console.log("✅ Email válido.");
+                            isValidEmail = true;
+                            warningMessage.style.display = "none";
+                            emailField.style.border = "2px solid green";
+                        }
+                    } else {
+                        console.warn("❌ Email inválido.");
+                        warningMessage.innerHTML = "⚠️ Ingresá un email válido.";
+                        warningMessage.style.display = "block";
+                        emailField.style.border = "2px solid red";
+                        isValidEmail = false;
+                    }
+                });
+
+                // Bloquear el envío del formulario si el email es inválido o tiene un dominio restringido
+                form.addEventListener("submit", function (event) {
+                    console.log("🔍 Verificando antes del envío. Email válido:", isValidEmail);
+
+                    if (!isValidEmail) {
+                        event.preventDefault();
+                        event.stopImmediatePropagation(); // Evita que WS Forms lo procese
+                        warningMessage.style.display = "block";
+                        emailField.style.border = "2px solid red";
+                        console.warn("⛔ Envío bloqueado: email inválido o dominio restringido.");
+                        return false;
+                    }
+                }, true);
+
+                emailField.setAttribute("data-validated", "true"); // Marcar el campo como validado
+            }
+
+            // Observar el DOM para encontrar campos de email dinámicos
+            function waitForEmailFields() {
+                let observer = new MutationObserver(() => {
+                    let emailFields = document.querySelectorAll("input[type='email'], input[name*='email']");
+                    emailFields.forEach(emailField => attachEmailValidation(emailField));
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            waitForEmailFields();
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'wsforms_email_validation');
