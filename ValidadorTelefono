@@ -1,0 +1,111 @@
+function wsforms_custom_phone_validation() {
+    ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("✅ Script cargado correctamente, esperando carga de WS Forms...");
+
+            function attachValidation(phoneField) {
+                const form = phoneField.closest("form");
+                let isValidNumber = false;
+
+                // Expresión regular sin +595 (solo 9 dígitos: operadora + 6 números)
+                const paraguayPhoneRegex = /^(961|962|963|964|965|966|971|972|973|974|975|976|981|982|983|984|985|986|991|992|993|994|995|996)\d{6}$/;
+
+                // Agregar placeholder dinámico
+                phoneField.placeholder = "Ej: 961123456";
+
+                // Crear contenedor para mensajes y verificación
+                let validationContainer = document.createElement("div");
+                validationContainer.style.display = "flex";
+                validationContainer.style.alignItems = "center";
+                validationContainer.style.marginTop = "5px";
+
+                let warningMessage = document.createElement("span");
+                warningMessage.style.color = "#e67e22"; // Naranja más amigable
+                warningMessage.style.fontSize = "14px";
+                warningMessage.style.display = "none";
+                warningMessage.innerHTML = "⚠️ Ingresá un número válido de Paraguay. Ej: <strong>961123456</strong>";
+
+                let checkIcon = document.createElement("span");
+                checkIcon.innerHTML = "✅";
+                checkIcon.style.fontSize = "18px";
+                checkIcon.style.marginLeft = "8px";
+                checkIcon.style.display = "none";
+
+                validationContainer.appendChild(warningMessage);
+                validationContainer.appendChild(checkIcon);
+                phoneField.parentNode.appendChild(validationContainer);
+
+                // Bloquear caracteres no numéricos en tiempo real
+                phoneField.addEventListener("input", function () {
+                    phoneField.value = phoneField.value.replace(/[^\d]/g, ""); // Solo números
+                    phoneField.style.border = "2px solid #ccc"; // Restablecer borde
+                    checkIcon.style.display = "none"; // Ocultar icono hasta verificar
+                });
+
+                // Validación cuando el usuario deja de escribir (blur)
+                phoneField.addEventListener("blur", function () {
+                    let phoneNumber = phoneField.value.trim();
+
+                    if (phoneNumber.length === 0) {
+                        isValidNumber = false;
+                        warningMessage.style.display = "none";
+                        phoneField.style.border = "2px solid #ccc"; // Restablecer borde
+                        checkIcon.style.display = "none";
+                        return;
+                    }
+
+                    console.log(`📞 Validando número localmente: ${phoneNumber}`);
+
+                    if (paraguayPhoneRegex.test(phoneNumber)) {
+                        console.log("✅ Número válido.");
+                        isValidNumber = true;
+                        warningMessage.style.display = "none"; // Ocultar advertencia
+                        phoneField.style.border = "2px solid green"; // Borde verde si es válido
+                        checkIcon.style.display = "inline"; // Mostrar ícono de verificación
+                    } else {
+                        console.warn("❌ Número inválido.");
+                        warningMessage.style.display = "block"; // Mostrar advertencia
+                        phoneField.style.border = "2px solid red"; // Borde rojo si es inválido
+                        checkIcon.style.display = "none"; // Ocultar ícono
+                        isValidNumber = false;
+                    }
+                });
+
+                // Evitar envío con número inválido sin generar error en WS Forms
+                form.addEventListener("submit", function (event) {
+                    console.log("🔍 Verificando antes del envío. Número válido:", isValidNumber);
+
+                    if (!isValidNumber) {
+                        event.preventDefault(); // Bloquea el envío
+                        event.stopImmediatePropagation(); // Evita que WS Forms lo procese
+                        warningMessage.style.display = "block"; // Asegurar que la advertencia siga visible
+                        phoneField.style.border = "2px solid red"; // Asegurar borde rojo
+                        console.warn("⛔ El envío del formulario fue bloqueado porque el número es inválido.");
+                        return false;
+                    }
+
+                    return true; // Permitir el envío en caso de número válido
+                }, true);
+            }
+
+            // Esperar a que WS Forms cargue el campo dinámicamente
+            function waitForField() {
+                let observer = new MutationObserver(() => {
+                    let phoneField = document.querySelector("input[type='tel'], input[name*='phone'], input[name*='field'], input[id*='wsf']");
+                    if (phoneField) {
+                        console.log("📞 Campo de teléfono encontrado:", phoneField);
+                        attachValidation(phoneField);
+                        observer.disconnect(); // Detener la observación una vez que el campo es encontrado
+                    }
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            waitForField();
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'wsforms_custom_phone_validation');
