@@ -1,0 +1,97 @@
+function wsforms_custom_phone_validation() {
+    ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("✅ Script cargado correctamente, esperando carga de WS Forms...");
+
+            // Expresión regular para números de Paraguay (sin +595, solo 9 dígitos)
+            const paraguayPhoneRegex = /^(961|962|963|964|965|966|971|972|973|974|975|976|981|982|983|984|985|986|991|992|993|994|995|996)\d{6}$/;
+
+            function validatePhone(phoneField) {
+                if (!phoneField || phoneField.hasAttribute("data-validated")) return;
+
+                const form = phoneField.closest("form");
+                let isValidNumber = false;
+
+                // Agregar placeholder solo si es tipo tel
+                phoneField.placeholder = "Ej: 961123456";
+
+                // Crear contenedor de advertencia y verificación
+                let warningMessage = document.createElement("span");
+                warningMessage.style.color = "#e67e22";
+                warningMessage.style.fontSize = "14px";
+                warningMessage.style.marginTop = "5px";
+                warningMessage.style.display = "none";
+                warningMessage.innerHTML = "⚠️ Ingresá un número válido de Paraguay. Ej: <strong>961123456</strong>";
+
+                let checkIcon = document.createElement("span");
+                checkIcon.innerHTML = "✅";
+                checkIcon.style.fontSize = "18px";
+                checkIcon.style.marginLeft = "8px";
+                checkIcon.style.display = "none";
+
+                phoneField.parentNode.appendChild(warningMessage);
+                phoneField.parentNode.appendChild(checkIcon);
+
+                phoneField.addEventListener("input", function () {
+                    phoneField.value = phoneField.value.replace(/[^\d]/g, "");
+                    phoneField.style.border = "2px solid #ccc";
+                    checkIcon.style.display = "none";
+                });
+
+                phoneField.addEventListener("blur", function () {
+                    let phoneNumber = phoneField.value.trim();
+
+                    if (phoneNumber.length === 0) {
+                        isValidNumber = false;
+                        warningMessage.style.display = "none";
+                        phoneField.style.border = "2px solid #ccc";
+                        checkIcon.style.display = "none";
+                        return;
+                    }
+
+                    if (paraguayPhoneRegex.test(phoneNumber)) {
+                        isValidNumber = true;
+                        warningMessage.style.display = "none";
+                        phoneField.style.border = "2px solid green";
+                        checkIcon.style.display = "inline";
+                    } else {
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        checkIcon.style.display = "none";
+                        isValidNumber = false;
+                    }
+                });
+
+                form.addEventListener("submit", function (event) {
+                    if (!isValidNumber) {
+                        event.preventDefault();
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        console.warn("⛔ Envío bloqueado: número inválido.");
+                        return false;
+                    }
+                }, true);
+
+                phoneField.setAttribute("data-validated", "true");
+            }
+
+            function waitForPhoneField() {
+                let observer = new MutationObserver(() => {
+                    let phoneField = document.querySelector("input[type='tel']");
+                    if (phoneField) {
+                        console.log("📞 Campo de teléfono encontrado:", phoneField);
+                        validatePhone(phoneField);
+                        observer.disconnect();
+                    }
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            waitForPhoneField();
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'wsforms_custom_phone_validation');
