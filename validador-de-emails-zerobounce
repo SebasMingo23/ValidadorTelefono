@@ -1,0 +1,97 @@
+function wsforms_neverbounce_email_validation() {
+    ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("📧 Integración con NeverBounce API activada para validación de emails...");
+
+            const API_KEY = "TU_API_KEY"; // Reemplazar con la API Key de NeverBounce
+            let isValidEmail = false;
+
+            async function validateEmail(emailField) {
+                if (!emailField || emailField.hasAttribute("data-validated")) return;
+
+                const form = emailField.closest("form");
+                const submitButton = form.querySelector("button[type='submit'], input[type='submit']");
+                
+                emailField.placeholder = "Ej: usuario@ejemplo.com";
+
+                let warningMessage = document.createElement("span");
+                warningMessage.style.color = "#e74c3c";
+                warningMessage.style.fontSize = "14px";
+                warningMessage.style.marginTop = "5px";
+                warningMessage.style.display = "none";
+                warningMessage.innerHTML = "⚠️ Ingresá un email válido.";
+
+                emailField.parentNode.appendChild(warningMessage);
+
+                emailField.addEventListener("blur", async function () {
+                    let emailValue = emailField.value.trim();
+
+                    if (emailValue.length === 0) {
+                        isValidEmail = false;
+                        warningMessage.style.display = "none";
+                        emailField.style.border = "2px solid #ccc";
+                        submitButton.disabled = true;
+                        return;
+                    }
+
+                    try {
+                        let response = await fetch(`https://api.neverbounce.com/v4/single/check?key=${API_KEY}&email=${encodeURIComponent(emailValue)}`);
+                        let data = await response.json();
+
+                        console.log("📧 Respuesta de NeverBounce API:", data);
+
+                        // Verificar si la API devuelve "valid"
+                        if (data.result === "valid") {
+                            isValidEmail = true;
+                            warningMessage.style.display = "none";
+                            emailField.style.border = "2px solid green";
+                            submitButton.disabled = false; 
+                            console.log("✅ Email válido:", emailValue);
+                        } else {
+                            warningMessage.innerHTML = "⚠️ Email inválido o no entregable.";
+                            warningMessage.style.display = "block";
+                            emailField.style.border = "2px solid red";
+                            isValidEmail = false;
+                            submitButton.disabled = true;
+                            console.warn("⛔ Email inválido:", emailValue);
+                        }
+                    } catch (error) {
+                        console.error("⛔ Error en la validación con NeverBounce API:", error);
+                        warningMessage.innerHTML = "⚠️ Error al validar el email.";
+                        warningMessage.style.display = "block";
+                        emailField.style.border = "2px solid red";
+                        isValidEmail = false;
+                        submitButton.disabled = true;
+                    }
+                });
+
+                // Bloquear el envío del formulario si el email es inválido
+                form.addEventListener("submit", async function (event) {
+                    if (!isValidEmail) {
+                        event.preventDefault();
+                        warningMessage.style.display = "block";
+                        emailField.style.border = "2px solid red";
+                        console.warn("⛔ Envío bloqueado: email inválido.");
+                        return false;
+                    }
+                }, true);
+
+                emailField.setAttribute("data-validated", "true");
+            }
+
+            function waitForEmailFields() {
+                let observer = new MutationObserver(() => {
+                    let emailFields = document.querySelectorAll("input[type='email']");
+                    emailFields.forEach(emailField => validateEmail(emailField));
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            waitForEmailFields();
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'wsforms_neverbounce_email_validation');
