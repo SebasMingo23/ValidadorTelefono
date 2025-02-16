@@ -1,10 +1,10 @@
-function wsforms_neverbounce_email_validation() {
+function wsforms_zerobounce_email_validation() {
     ?>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            console.log("📧 Integración con NeverBounce API activada para validación de emails...");
+            console.log("📧 Integración con ZeroBounce API activada para validación de emails...");
 
-            const API_KEY = "TU_API_KEY"; // Reemplazar con la API Key de NeverBounce
+            const API_KEY = "6b14da5b839f4bf7834c96330082c755"; // API Key de ZeroBounce
             let isValidEmail = false;
 
             async function validateEmail(emailField) {
@@ -31,33 +31,33 @@ function wsforms_neverbounce_email_validation() {
                         isValidEmail = false;
                         warningMessage.style.display = "none";
                         emailField.style.border = "2px solid #ccc";
-                        submitButton.disabled = true;
+                        submitButton.disabled = true; // Bloquear el botón mientras no hay validación
                         return;
                     }
 
                     try {
-                        let response = await fetch(`https://api.neverbounce.com/v4/single/check?key=${API_KEY}&email=${encodeURIComponent(emailValue)}`);
+                        let response = await fetch(`https://api.zerobounce.net/v2/validate?api_key=${API_KEY}&email=${emailValue}`);
                         let data = await response.json();
 
-                        console.log("📧 Respuesta de NeverBounce API:", data);
+                        console.log("📧 Respuesta de ZeroBounce API:", data);
 
-                        // Verificar si la API devuelve "valid"
-                        if (data.result === "valid") {
+                        // Validamos si el estado es "valid"
+                        if (data.status === "valid") {
                             isValidEmail = true;
                             warningMessage.style.display = "none";
                             emailField.style.border = "2px solid green";
-                            submitButton.disabled = false; 
+                            submitButton.disabled = false; // Habilitar el botón solo si el email es válido
                             console.log("✅ Email válido:", emailValue);
                         } else {
                             warningMessage.innerHTML = "⚠️ Email inválido o no entregable.";
                             warningMessage.style.display = "block";
                             emailField.style.border = "2px solid red";
                             isValidEmail = false;
-                            submitButton.disabled = true;
+                            submitButton.disabled = true; // Bloquear el botón si el email es inválido
                             console.warn("⛔ Email inválido:", emailValue);
                         }
                     } catch (error) {
-                        console.error("⛔ Error en la validación con NeverBounce API:", error);
+                        console.error("⛔ Error en la validación con ZeroBounce API:", error);
                         warningMessage.innerHTML = "⚠️ Error al validar el email.";
                         warningMessage.style.display = "block";
                         emailField.style.border = "2px solid red";
@@ -66,7 +66,7 @@ function wsforms_neverbounce_email_validation() {
                     }
                 });
 
-                // Bloquear el envío del formulario si el email es inválido
+                // Bloquear el envío del formulario
                 form.addEventListener("submit", async function (event) {
                     if (!isValidEmail) {
                         event.preventDefault();
@@ -94,4 +94,4 @@ function wsforms_neverbounce_email_validation() {
     </script>
     <?php
 }
-add_action('wp_footer', 'wsforms_neverbounce_email_validation');
+add_action('wp_footer', 'wsforms_zerobounce_email_validation');
