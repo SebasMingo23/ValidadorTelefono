@@ -1,0 +1,99 @@
+function wsforms_numverify_phone_validation() {
+    ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("📞 Integración con NumVerify API activada para validación de teléfonos...");
+
+            const API_KEY = "2294414fc9ba083dc1e1a61c92166c97"; // Reemplazá con tu API Key de NumVerify
+            let isValidPhone = false;
+
+            async function validatePhone(phoneField) {
+                if (!phoneField || phoneField.hasAttribute("data-validated")) return;
+
+                const form = phoneField.closest("form");
+                const submitButton = form.querySelector("button[type='submit'], input[type='submit']");
+                
+                phoneField.placeholder = "Ej: 972165622"; // Solo los 9 números
+
+                let warningMessage = document.createElement("span");
+                warningMessage.style.color = "#e74c3c";
+                warningMessage.style.fontSize = "14px";
+                warningMessage.style.marginTop = "5px";
+                warningMessage.style.display = "none";
+                warningMessage.innerHTML = "⚠️ Ingresá un número válido.";
+
+                phoneField.parentNode.appendChild(warningMessage);
+
+                phoneField.addEventListener("blur", async function () {
+                    let phoneValue = phoneField.value.trim();
+
+                    if (phoneValue.length !== 9) {
+                        isValidPhone = false;
+                        warningMessage.innerHTML = "⚠️ El número debe tener 9 dígitos.";
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        submitButton.disabled = true;
+                        return;
+                    }
+
+                    let fullPhoneNumber = "+595" + phoneValue; // Concatenamos el código de país
+
+                    try {
+                        let response = await fetch(`http://apilayer.net/api/validate?access_key=${API_KEY}&number=${encodeURIComponent(fullPhoneNumber)}&format=1`);
+                        let data = await response.json();
+
+                        console.log("📞 Respuesta de NumVerify API:", data);
+
+                        if (data.valid) {
+                            isValidPhone = true;
+                            warningMessage.style.display = "none";
+                            phoneField.style.border = "2px solid green";
+                            submitButton.disabled = false;
+                            console.log("✅ Número válido:", fullPhoneNumber);
+                        } else {
+                            warningMessage.innerHTML = "⚠️ Número inválido.";
+                            warningMessage.style.display = "block";
+                            phoneField.style.border = "2px solid red";
+                            isValidPhone = false;
+                            submitButton.disabled = true;
+                            console.warn("⛔ Número inválido:", fullPhoneNumber);
+                        }
+                    } catch (error) {
+                        console.error("⛔ Error en la validación con NumVerify API:", error);
+                        warningMessage.innerHTML = "⚠️ Error al validar el número.";
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        isValidPhone = false;
+                        submitButton.disabled = true;
+                    }
+                });
+
+                // Bloquear el envío del formulario si el número es inválido
+                form.addEventListener("submit", function (event) {
+                    if (!isValidPhone) {
+                        event.preventDefault();
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        console.warn("⛔ Envío bloqueado: número inválido.");
+                        return false;
+                    }
+                }, true);
+
+                phoneField.setAttribute("data-validated", "true");
+            }
+
+            function waitForPhoneFields() {
+                let observer = new MutationObserver(() => {
+                    let phoneFields = document.querySelectorAll("input[type='tel']");
+                    phoneFields.forEach(phoneField => validatePhone(phoneField));
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            waitForPhoneFields();
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'wsforms_numverify_phone_validation');
