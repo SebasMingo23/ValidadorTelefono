@@ -1,0 +1,119 @@
+function wsforms_custom_phone_validation() {
+    ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("✅ Script cargado correctamente, esperando carga de WS Forms...");
+
+            // Expresión regular para números de Paraguay (sin +595, solo 9 dígitos)
+            const paraguayPhoneRegex = /^(961|962|963|964|965|966|971|972|973|974|975|976|981|982|983|984|985|986|991|992|993|994|995|996)\d{6}$/;
+
+            // Lista de números no válidos (sin el +595)
+            const invalidNumbers = [
+                "961111111", "962111111", "963111111", "964111111", "965111111", "966111111", "967111111",
+                "971111111", "972111111", "973111111", "974111111", "975111111", "976111111", "977111111",
+                "981111111", "982111111", "983111111", "984111111", "985111111", "986111111", "987111111",
+                "991111111", "992111111", "993111111", "994111111", "995111111", "996111111", "997111111",
+
+                "961222222", "962222222", "963222222", "964222222", "965222222", "966222222", "967222222",
+                "971222222", "972222222", "973222222", "974222222", "975222222", "976222222", "977222222",
+                "981222222", "982222222", "983222222", "984222222", "985222222", "986222222", "987222222",
+                "991222222", "992222222", "993222222", "994222222", "995222222", "996222222", "997222222"
+            ];
+
+            function validatePhone(phoneField) {
+                if (!phoneField || phoneField.hasAttribute("data-validated")) return;
+
+                const form = phoneField.closest("form");
+                let isValidNumber = false;
+
+                // Agregar placeholder solo si es tipo tel
+                phoneField.placeholder = "Ej: 961123456";
+
+                // Crear contenedor de advertencia y verificación
+                let warningMessage = document.createElement("span");
+                warningMessage.style.color = "#e67e22";
+                warningMessage.style.fontSize = "14px";
+                warningMessage.style.marginTop = "5px";
+                warningMessage.style.display = "none";
+                warningMessage.innerHTML = "⚠️ Ingresá un número válido de Paraguay. Ej: <strong>961123456</strong>";
+
+                let checkIcon = document.createElement("span");
+                checkIcon.innerHTML = "✅";
+                checkIcon.style.fontSize = "18px";
+                checkIcon.style.marginLeft = "8px";
+                checkIcon.style.display = "none";
+
+                phoneField.parentNode.appendChild(warningMessage);
+                phoneField.parentNode.appendChild(checkIcon);
+
+                phoneField.addEventListener("input", function () {
+                    phoneField.value = phoneField.value.replace(/[^\d]/g, "");
+                    phoneField.style.border = "2px solid #ccc";
+                    checkIcon.style.display = "none";
+                });
+
+                phoneField.addEventListener("blur", function () {
+                    let phoneNumber = phoneField.value.trim();
+
+                    if (phoneNumber.length === 0) {
+                        isValidNumber = false;
+                        warningMessage.style.display = "none";
+                        phoneField.style.border = "2px solid #ccc";
+                        checkIcon.style.display = "none";
+                        return;
+                    }
+
+                    if (invalidNumbers.includes(phoneNumber)) {
+                        warningMessage.innerHTML = "⚠️ Este número no está permitido.";
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        checkIcon.style.display = "none";
+                        isValidNumber = false;
+                        return;
+                    }
+
+                    if (paraguayPhoneRegex.test(phoneNumber)) {
+                        isValidNumber = true;
+                        warningMessage.style.display = "none";
+                        phoneField.style.border = "2px solid green";
+                        checkIcon.style.display = "inline";
+                    } else {
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        checkIcon.style.display = "none";
+                        isValidNumber = false;
+                    }
+                });
+
+                form.addEventListener("submit", function (event) {
+                    if (!isValidNumber) {
+                        event.preventDefault();
+                        warningMessage.style.display = "block";
+                        phoneField.style.border = "2px solid red";
+                        console.warn("⛔ Envío bloqueado: número inválido.");
+                        return false;
+                    }
+                }, true);
+
+                phoneField.setAttribute("data-validated", "true");
+            }
+
+            function waitForPhoneField() {
+                let observer = new MutationObserver(() => {
+                    let phoneField = document.querySelector("input[type='tel']");
+                    if (phoneField) {
+                        console.log("📞 Campo de teléfono encontrado:", phoneField);
+                        validatePhone(phoneField);
+                        observer.disconnect();
+                    }
+                });
+
+                observer.observe(document.body, { childList: true, subtree: true });
+            }
+
+            waitForPhoneField();
+        });
+    </script>
+    <?php
+}
+add_action('wp_footer', 'wsforms_custom_phone_validation');
